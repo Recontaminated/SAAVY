@@ -1,7 +1,11 @@
 Final reqs
-Each image file should output a mask, with ROIs tagged by ID.
-CSV for each image including ROIs id, and assessed viability for each id
-Estimate of circularity 
+
+
+
+
+CSV for every batch of images processed and assessed viability for each image
+
+average Estimate of circularity (R^2 value when  fitting image mask  to a circle)
 Average viability per image
 
 
