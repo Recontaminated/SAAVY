@@ -1,0 +1,25 @@
+Final reqs
+Each image file should output a mask, with ROIs tagged by ID.
+CSV for each image including ROIs id, and assessed viability for each id
+Estimate of circularity 
+Average viability per image
+
+
+Folder structure:
+
+Input
+END OF ASSAY
+	PICTURE 1
+	PICTURE 2
+	PICTURE 3
+	….
+
+TBD
+Output
+	END OF ASSAY
+		PICTURE MASK 1
+		PICTURE MASK 2
+		PICTURE MASK 3
+		…
+		.CSV with Picture mask —> final reqs
+
