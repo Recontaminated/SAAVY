@@ -49,7 +49,7 @@ model = modellib.MaskRCNN(mode="inference", model_dir=MRCNN_model_path, config=C
 # load model weights
 model.load_weights(MRCNN_model_path, by_name=True)
 
-save_directory = './out2'
+save_directory = './out'
 input_directory = './input'
 
 for filename in os.listdir(input_directory):
