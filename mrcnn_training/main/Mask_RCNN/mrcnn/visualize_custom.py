@@ -30,7 +30,7 @@ def apply_mask(image, mask, color, alpha=0):
                                   image[:, :, c])
     return image
 
-def display_instances(image, boxes, masks, class_ids, scores, threshold, filename):
+def display_instances(image, boxes, masks, class_ids, scores, threshold, filename,Debug=False):
 #def display_instances(image, boxes, masks, class_ids, filename, threshold, scores=None):
     """
     boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
@@ -132,13 +132,10 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 ################################ cell region properties calculation end ###############
                 
                 """ thresholding mean intensity value  to calculate the cell liveliness/viability """
-                zero_percent_count= 0
-                tweenty_percent_count= 0
-                fifty_percent_count= 0
-                eighty_percent_count= 0
-                ninty_percent_count= 0
-                hundred_percent_count= 0
-               
+                endpoints = (40,230)
+                minval, maxval = endpoints
+
+                
                 if 0<mean_val<50:
                     cell_state = "0% live"
                     cell_state =0
@@ -169,21 +166,24 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                     cell_state =100
                     #print(cell_state)
                 
-                    
+                
                 crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-                #cv2.imshow('single cell',crop_img)
-                #cv2.waitKey()
-                #cv2.imshow('masked_image',mask)
-                #cv2.waitKey()
-                #cv2.imshow('masked_image_out',masked_image_out)
-                #cv2.waitKey()
+                if Debug:
+                    print("mean val for file: "+ filename +"is: "+ str(mean_val))
+                    cv2.imshow('single cell',crop_img)
+                    cv2.waitKey()
+                    cv2.imshow('masked_image',mask)
+                    cv2.waitKey()
+                    cv2.imshow('masked_image_out',masked_image_out)
+                    cv2.waitKey()
+                    cv2.destroyAllWindows()
         
             masked_image_out = masked_image_out.astype(np.uint8)
             cv2.imwrite(filename, masked_image_out)
         cell_state_list.append(cell_state)
         circularity_list.append(circularity)
        # print(cell_state_list)
-            #print(kkk)
+
 	
     return cell,cell_state_list,circularity_list
 
