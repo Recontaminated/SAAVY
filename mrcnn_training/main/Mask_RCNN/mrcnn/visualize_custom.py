@@ -2,6 +2,8 @@
 import cv2
 import os
 import sys
+from cv2 import mean
+from cv2 import normalize
 import numpy as np
 from skimage.measure import find_contours
 import csv
@@ -132,39 +134,62 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 ################################ cell region properties calculation end ###############
                 
                 """ thresholding mean intensity value  to calculate the cell liveliness/viability """
-                endpoints = (40,230)
-                minval, maxval = endpoints
+                # endpoints = (50,175)
+                # minval, maxval = endpoints
 
+                # normalize = (mean_val - minval) / (maxval - minval)
+                # cell_state = normalize
+
+                deadThreshold = 80
+                precent20 = 100
+                precent50 = 120
+                precent80 = 130
+                precent100 = 140
                 
-                if 0<mean_val<50:
+
+
+                print(mean_val)
+                if 0<mean_val<=deadThreshold:
                     cell_state = "0% live"
                     cell_state =0
                     #print(cell_state)
-                    
-                elif 51<mean_val<90:
-                    cell_state = "20% live"
+                
+                elif deadThreshold<mean_val<=precent20:
+                    cell_state =1
+                elif precent20<mean_val<=precent50:
                     cell_state =20
-                    #print(cell_state)
-                    
-                elif 91<mean_val<129:
-                    cell_state = "50% live"
+                elif precent50<mean_val<=precent80:
                     cell_state =50
-                    #print(cell_state)
-                    
-                elif 130<mean_val<180:
-                    cell_state = "80%live"
+                elif precent80<mean_val<=precent100:
                     cell_state =80
-                    #print(cell_state)
-                    
-                elif 181<mean_val<210:
-                    cell_state = "90%live"
-                    cell_state =90
-                    #print(cell_state)
-                    
-                elif 211<mean_val<256:
-                    cell_state = "100%live"
+                elif mean_val>precent100:
                     cell_state =100
-                    #print(cell_state)
+                
+                    
+                # elif 80<mean_val<99:
+                #     cell_state = "20% live"
+                #     cell_state =20
+                #     #print(cell_state)
+                     
+                # elif 100<mean_val<129:
+                #     cell_state = "50% live"
+                #     cell_state =50
+                #     #print(cell_state)
+                    
+                # elif 130<mean_val<140:
+                #     cell_state = "80%live"
+                #     cell_state =80
+                #     #print(cell_state)
+                    
+                # elif 150<mean_val<159:
+                #     cell_state = "90%live"
+                #     cell_state =90
+                #     #print(cell_state)
+                    
+                # elif 160<mean_val<256:
+                #     cell_state = "100%live"
+                #     cell_state =100
+                #     #print(cell_state)
                 
                 
                 crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
