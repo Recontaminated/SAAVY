@@ -44,7 +44,7 @@ class Config(Config):
     # IMAGE_MAX_DIM = 832
 
 config = Config()
-MRCNN_model_path = "prediction_model\\mask_rcnn_custom_0001.h5"
+MRCNN_model_path = "prediction_model\\mask_rcnn_custom_0005.h5"
 model = modellib.MaskRCNN(mode="inference", model_dir=MRCNN_model_path, config=Config())
 #load model weights
 model.load_weights(MRCNN_model_path, by_name=True)
@@ -68,9 +68,10 @@ for filename in os.listdir(input_directory):
         dr = save_directory + '/' + filename
         """ Analysis part """
         cell_count,cell_state_list,circularity_list = visualize_custom.display_instances(image, r1['rois'], r1['masks'], r1['class_ids'],
-                                r1['scores'], thrld, dr,Debug=True)
+                                r1['scores'], thrld, dr,Debug=False)
+
         
-        avg_live_state = np.round(mean(cell_state_list))
+        avg_live_state =mean(cell_state_list)
         avg_circularity = mean(circularity_list)
         avg_circularity = round(avg_circularity, 3)
         
