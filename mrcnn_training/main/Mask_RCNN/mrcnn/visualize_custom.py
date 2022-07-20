@@ -58,6 +58,7 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
         
     cell_state_list =[]
     circularity_list =[]
+    contour_area_list =[]
     for i in range(N):
 	
         if scores[i] > threshold :  
@@ -109,8 +110,8 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 #print("avg_pixel_cell crop bb:",avg_pixel_cell)
                 
                 contour_area = cv2.contourArea(verts)
+                contour_area_list.append(contour_area)
                 #print("contour area: ",contour_area)
-                
                 rect_area = w*h
                 #print("rect_area:",rect_area)
                 
@@ -140,7 +141,7 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 # normalize = (mean_val - minval) / (maxval - minval)
                 # cell_state = normalize
 
-                deadThreshold = 80
+                deadThreshold = 90
                 precent20 = 100
                 precent50 = 120
                 precent80 = 130
@@ -148,7 +149,7 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 
 
 
-                print(mean_val)
+                # print(mean_val)
                 if 0<mean_val<=deadThreshold:
                     cell_state = "0% live"
                     cell_state =0
@@ -210,7 +211,7 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
        # print(cell_state_list)
 
 	
-    return cell,cell_state_list,circularity_list
+    return cell,cell_state_list,circularity_list,contour_area_list
 
 
 

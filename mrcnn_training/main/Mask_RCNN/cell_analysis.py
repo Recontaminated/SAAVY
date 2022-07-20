@@ -44,7 +44,7 @@ class Config(Config):
     # IMAGE_MAX_DIM = 832
 
 config = Config()
-MRCNN_model_path = "prediction_model\\mask_rcnn_custom_0005.h5"
+MRCNN_model_path = "prediction_model\\mask_rcnn_custom_0015.h5"
 model = modellib.MaskRCNN(mode="inference", model_dir=MRCNN_model_path, config=Config())
 #load model weights
 model.load_weights(MRCNN_model_path, by_name=True)
@@ -55,42 +55,48 @@ input_directory = './input'
 img_name_list = []
 avg_viability_list =[]
 avg_circularity_list = []
-
+avg_contour_area_list = []
+image_resolution_list = []
 for filename in os.listdir(input_directory):
     print("image_name: ",filename)
     f = os.path.join(input_directory, filename)
     if os.path.isfile(f):
        # print(f)
         image = cv2.imread(f)
+        width, height, channels = image.shape
+        image_resolution_list.append(f"{width}x{height}")
+
         results1 = model.detect([image], verbose=10)
         r1 = results1[0]
         thrld = 0.1
         dr = save_directory + '/' + filename
         """ Analysis part """
-        cell_count,cell_state_list,circularity_list = visualize_custom.display_instances(image, r1['rois'], r1['masks'], r1['class_ids'],
+        cell_count,cell_state_list,circularity_list, contour_area_list = visualize_custom.display_instances(image, r1['rois'], r1['masks'], r1['class_ids'],
                                 r1['scores'], thrld, dr,Debug=False)
 
         
         avg_live_state =mean(cell_state_list)
         avg_circularity = mean(circularity_list)
         avg_circularity = round(avg_circularity, 3)
-        
+        avg_contour_area = mean(contour_area_list)*0.20112673401606182 #convert to um
+        avg_contour_area = round(avg_contour_area, 3)
         #print(r1['masks'])
-        print("cellcount: ",cell_count)
-        print("cell_liveliness_state: ",cell_state_list)
-        print("circularity;",circularity_list)
-        print("average_viability: ",avg_live_state)
-        print("average_circularity: ",avg_circularity)
+        # print("cellcount: ",cell_count)
+        # print("cell_liveliness_state: ",cell_state_list)
+        # print("circularity;",circularity_list)
+        # print("average_viability: ",avg_live_state)
+        # print("average_circularity: ",avg_circularity)
         
         img_name_list.append(filename)
         avg_viability_list.append(avg_live_state)
         avg_circularity_list.append(avg_circularity)
+        avg_contour_area_list.append(avg_contour_area)
 
         """ csv file creation """
-        csv_lst = [img_name_list,avg_viability_list,avg_circularity_list]
+        csv_lst = [img_name_list,image_resolution_list,avg_viability_list,avg_contour_area_list,avg_circularity_list]
         
-        df = pd.DataFrame(list(zip(img_name_list, avg_circularity_list,avg_viability_list)),
-               columns =['Image_Name', 'Average_Circularity(ideal circle=0)','Average_Viability (%)'])
+        df = pd.DataFrame(list(zip(img_name_list,image_resolution_list,avg_circularity_list,avg_contour_area_list,avg_viability_list)),
+               columns =['Image_Name','Image_Resolution','Average_Circularity(ideal circle=0)','Average area','Average_Viability (%)'])
         df.to_csv("Analysis_out.csv", encoding='utf-8',index =False)
         
         

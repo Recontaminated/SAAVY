@@ -37,7 +37,7 @@ class CustomConfig(Config):
 
     # We use a GPU with 12GB memory, which can fit two images.
     # Adjust down if you use a smaller GPU.
-    IMAGES_PER_GPU = 1
+    IMAGES_PER_GPU = 2
 
     # Number of classes (including background)
     NUM_CLASSES = 1 + 1  # Background + number of classes (Here, 2)
@@ -96,7 +96,7 @@ class CustomDataset(utils.Dataset):
                                           #else r['region_attributes']['category_id'] for r in a['regions']]
             
             #print(".............",custom)
-            #print(kkk)
+            
             num_ids=[]
             #Add the classes according to the requirement
             for n in custom:
