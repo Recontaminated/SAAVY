@@ -2,8 +2,6 @@
 import cv2
 import os
 import sys
-from cv2 import mean
-from cv2 import normalize
 import numpy as np
 from skimage.measure import find_contours
 import csv
@@ -32,7 +30,7 @@ def apply_mask(image, mask, color, alpha=0):
                                   image[:, :, c])
     return image
 
-def display_instances(image, boxes, masks, class_ids, scores, threshold, filename,Debug=False):
+def display_instances(image, boxes, masks, class_ids, scores, threshold, filename):
 #def display_instances(image, boxes, masks, class_ids, filename, threshold, scores=None):
     """
     boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
@@ -58,7 +56,6 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
         
     cell_state_list =[]
     circularity_list =[]
-    contour_area_list =[]
     for i in range(N):
 	
         if scores[i] > threshold :  
@@ -110,8 +107,8 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 #print("avg_pixel_cell crop bb:",avg_pixel_cell)
                 
                 contour_area = cv2.contourArea(verts)
-                contour_area_list.append(contour_area)
                 #print("contour area: ",contour_area)
+                
                 rect_area = w*h
                 #print("rect_area:",rect_area)
                 
@@ -123,8 +120,8 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 """ Average intensity value of a cell """
                 mean_val = cv2.mean(grey_img,mask = mask)
                 mean_val =list(mean_val)
-                mean_val = mean_val[0]
-                #print("mean_intensity: ",mean_val)
+                mean_val = round(mean_val[0])
+                print("mean_intensity: ",mean_val)
                 
                 """eccentricity/circularity of a circle is 0"""
                 (x,y), (minorAxisLength, majorAxisLength), angle = cv2.fitEllipse(verts)
@@ -135,83 +132,61 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 ################################ cell region properties calculation end ###############
                 
                 """ thresholding mean intensity value  to calculate the cell liveliness/viability """
-                # endpoints = (50,175)
-                # minval, maxval = endpoints
-
-                # normalize = (mean_val - minval) / (maxval - minval)
-                # cell_state = normalize
-
-                deadThreshold = 90
-                precent20 = 100
-                precent50 = 120
-                precent80 = 130
-                precent100 = 140
-                
-
-
-                # print(mean_val)
-                if 0<mean_val<=deadThreshold:
+                zero_percent_count= 0
+                twenty_percent_count= 0
+                fifty_percent_count= 0
+                eighty_percent_count= 0
+                ninty_percent_count= 0
+                hundred_percent_count= 0
+               
+                if 0<=mean_val<=50:
                     cell_state = "0% live"
                     cell_state =0
                     #print(cell_state)
-                
-                elif deadThreshold<mean_val<=precent20:
-                    cell_state =1
-                elif precent20<mean_val<=precent50:
+                    
+                elif 51<=mean_val<=90:
+                    cell_state = "20% live"
                     cell_state =20
-                elif precent50<mean_val<=precent80:
+                    #print(cell_state)
+                    
+                elif 91<=mean_val<=129:
+                    cell_state = "50% live"
                     cell_state =50
-                elif precent80<mean_val<=precent100:
+                    #print(cell_state)
+                    
+                elif 130<=mean_val<=180:
+                    cell_state = "80%live"
                     cell_state =80
-                elif mean_val>precent100:
+                    #print(cell_state)
+                    
+                elif 181<=mean_val<=210:
+                    cell_state = "90%live"
+                    cell_state =90
+                    #print(cell_state)
+                    
+                elif 211<=mean_val<=256:
+                    cell_state = "100%live"
                     cell_state =100
+                    #print(cell_state)
                 
                     
-                # elif 80<mean_val<99:
-                #     cell_state = "20% live"
-                #     cell_state =20
-                #     #print(cell_state)
-                     
-                # elif 100<mean_val<129:
-                #     cell_state = "50% live"
-                #     cell_state =50
-                #     #print(cell_state)
-                    
-                # elif 130<mean_val<140:
-                #     cell_state = "80%live"
-                #     cell_state =80
-                #     #print(cell_state)
-                    
-                # elif 150<mean_val<159:
-                #     cell_state = "90%live"
-                #     cell_state =90
-                #     #print(cell_state)
-                    
-                # elif 160<mean_val<256:
-                #     cell_state = "100%live"
-                #     cell_state =100
-                #     #print(cell_state)
-                
-                
                 crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-                if Debug:
-                    print("mean val for file: "+ filename +"is: "+ str(mean_val))
-                    cv2.imshow('single cell',crop_img)
-                    cv2.waitKey()
-                    cv2.imshow('masked_image',mask)
-                    cv2.waitKey()
-                    cv2.imshow('masked_image_out',masked_image_out)
-                    cv2.waitKey()
-                    cv2.destroyAllWindows()
+                #cv2.imshow('single cell',crop_img)
+                #cv2.waitKey()
+                #cv2.imshow('masked_image',mask)
+                #cv2.waitKey()
+                #cv2.imshow('masked_image_out',masked_image_out)
+                #cv2.waitKey()
         
             masked_image_out = masked_image_out.astype(np.uint8)
             cv2.imwrite(filename, masked_image_out)
+            #print(cell_state)
         cell_state_list.append(cell_state)
         circularity_list.append(circularity)
        # print(cell_state_list)
-
+            #print(kkk)
 	
-    return cell,cell_state_list,circularity_list,contour_area_list
+    return cell,cell_state_list,circularity_list
 
 
 
