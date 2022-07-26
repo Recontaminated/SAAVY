@@ -5,6 +5,14 @@ import datetime
 import numpy as np
 import skimage.draw
 
+
+from tensorflow.compat.v1 import ConfigProto
+from tensorflow.compat.v1 import InteractiveSession
+config = ConfigProto()
+config.gpu_options.allow_growth = True
+session = InteractiveSession(config=config)
+
+
 from warnings import filterwarnings
 filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
 #config.gpu_options.allow_growth = True
@@ -96,18 +104,17 @@ class CustomDataset(utils.Dataset):
                                           #else r['region_attributes']['category_id'] for r in a['regions']]
             
             #print(".............",custom)
-            
+            #print(kkk)
             num_ids=[]
             #Add the classes according to the requirement
             for n in custom:
                 try:
-                    
+                    # if n['label']=='Cell':
                         #print("7777777777777777777777777777777777777777777777777777777777777777777777")
-                    num_ids.append(1)                                         
+                        num_ids.append(1)                                         
                 except:
                     pass
             #print(num_ids)
-            #print(kkk)
 
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, VIA doesn't include it in JSON, so we must read
@@ -116,7 +123,7 @@ class CustomDataset(utils.Dataset):
             image = skimage.io.imread(image_path)
             height, width = image.shape[:2]
             print(".........................",height,width)
-
+            #print(kkk)
             self.add_image(
                 source = "custom",
                 image_id=a['filename'],  # use file name as a unique image id
