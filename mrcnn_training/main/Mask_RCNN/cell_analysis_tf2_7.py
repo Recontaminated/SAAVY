@@ -57,11 +57,13 @@ config = Config()
 print(config)
 config.display()
 #print(kkk)
-MRCNN_model_path = "prediction_model\\Workingmask_rcnn_custom_0015.h5"
+MRCNN_model_path = "prediction_model\\v1.h5"
 """
 from keras.backend import manual_variable_initialization 
 manual_variable_initialization(True)
 """
+
+
 model = modellib.MaskRCNN(mode="inference", model_dir=MRCNN_model_path, config=Config())
 #load model weights
 model.load_weights(MRCNN_model_path, by_name=True)
