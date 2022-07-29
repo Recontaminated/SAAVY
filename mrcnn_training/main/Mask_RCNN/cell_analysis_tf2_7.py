@@ -57,7 +57,7 @@ config = Config()
 print(config)
 config.display()
 #print(kkk)
-MRCNN_model_path = "prediction_model\\v1.h5"
+MRCNN_model_path = "prediction_model\\Workingmask_rcnn_custom_0015.h5"
 """
 from keras.backend import manual_variable_initialization 
 manual_variable_initialization(True)
