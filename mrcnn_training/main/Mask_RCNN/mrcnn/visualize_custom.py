@@ -30,7 +30,7 @@ def apply_mask(image, mask, color, alpha=0):
                                   image[:, :, c])
     return image
 
-def display_instances(image, boxes, masks, class_ids, scores, threshold, filename):
+def display_instances(image, boxes, masks, class_ids, scores, threshold, filename, Debug=False):
 #def display_instances(image, boxes, masks, class_ids, filename, threshold, scores=None):
     """
     boxes: [num_instance, (y1, x1, y2, x2, class_id)] in image coordinates.
@@ -56,8 +56,9 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
         
     cell_state_list =[]
     circularity_list =[]
+    contour_area_list =[]
     for i in range(N):
-	
+
         if scores[i] > threshold :  
             color = colors[class_ids[i] - 1]
             if class_ids[i] - 1 == 0:
@@ -96,32 +97,32 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 masked_image_out = cv2.polylines(masked_image,[verts],True,clr,thickness)               
                 mask= np.zeros(grey_img.shape,np.uint8)
                 cv2.drawContours(mask,[verts],0,255,-1)
-                x,y,w,h = cv2.boundingRect(verts) # offsets - with this you get 'mask'              
+                x,y,w,h = cv2.boundingRect(verts) # offsets - with this you get 'mask'       
+                masked_image_out = cv2.putText(masked_image_out, str(i), (x,y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,0), 2)      
                 crop_img = orig_img[y:y+h,x:x+w]
                 #cv2.imshow('cutted contour',crop_img)
                 #cv2.waitKey()
              
                 ################################## cell region properties calculation start ##########
                #reference: https://opencv24-python-tutorials.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_contours/py_contour_properties/py_contour_properties.html
-                avg_pixel_cell = np.mean(crop_img)
+               
                 #print("avg_pixel_cell crop bb:",avg_pixel_cell)
                 
                 contour_area = cv2.contourArea(verts)
+                contour_area_list.append(contour_area)
                 #print("contour area: ",contour_area)
                 
-                rect_area = w*h
+                
                 #print("rect_area:",rect_area)
                 
-                extent = float(contour_area)/rect_area  #object area/bounding rectangle area
-                #print("extent: ",extent)
+
                 
-                min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(grey_img,mask = mask)
-                #print("min_max values:",min_val,max_val)
+                # min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(grey_img,mask = mask)
+                # #print("min_max values:",min_val,max_val)
                 """ Average intensity value of a cell """
                 mean_val = cv2.mean(grey_img,mask = mask)
                 mean_val =list(mean_val)
                 mean_val = round(mean_val[0])
-                print("mean_intensity: ",mean_val)
                 
                 """eccentricity/circularity of a circle is 0"""
                 (x,y), (minorAxisLength, majorAxisLength), angle = cv2.fitEllipse(verts)
@@ -132,61 +133,79 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 ################################ cell region properties calculation end ###############
                 
                 """ thresholding mean intensity value  to calculate the cell liveliness/viability """
-                zero_percent_count= 0
-                twenty_percent_count= 0
-                fifty_percent_count= 0
-                eighty_percent_count= 0
-                ninty_percent_count= 0
-                hundred_percent_count= 0
-               
-                if 0<=mean_val<=50:
+ 
+                deadThreshold = 100
+                precent20 = 110
+                precent50 = 120
+                precent80 = 130
+                precent100 = 140
+                
+
+
+                # print(mean_val)
+                if mean_val<deadThreshold:
                     cell_state = "0% live"
                     cell_state =0
                     #print(cell_state)
-                    
-                elif 51<=mean_val<=90:
-                    cell_state = "20% live"
+                
+                elif deadThreshold<=mean_val<precent20:
+                    cell_state =0
+                elif precent20<=mean_val<precent50:
                     cell_state =20
-                    #print(cell_state)
-                    
-                elif 91<=mean_val<=129:
-                    cell_state = "50% live"
+                elif precent50<=mean_val<precent80:
                     cell_state =50
-                    #print(cell_state)
-                    
-                elif 130<=mean_val<=180:
-                    cell_state = "80%live"
+                elif precent80<=mean_val<precent100:
                     cell_state =80
-                    #print(cell_state)
-                    
-                elif 181<=mean_val<=210:
-                    cell_state = "90%live"
-                    cell_state =90
-                    #print(cell_state)
-                    
-                elif 211<=mean_val<=256:
-                    cell_state = "100%live"
+                else:
                     cell_state =100
-                    #print(cell_state)
                 
                     
-                crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-                #cv2.imshow('single cell',crop_img)
-                #cv2.waitKey()
-                #cv2.imshow('masked_image',mask)
-                #cv2.waitKey()
-                #cv2.imshow('masked_image_out',masked_image_out)
-                #cv2.waitKey()
+                # elif 80<mean_val<99:
+                #     cell_state = "20% live"
+                #     cell_state =20
+                #     #print(cell_state)
+                     
+                # elif 100<mean_val<129:
+                #     cell_state = "50% live"
+                #     cell_state =50
+                #     #print(cell_state)
+                    
+                # elif 130<mean_val<140:
+                #     cell_state = "80%live"
+                #     cell_state =80
+                #     #print(cell_state)
+                    
+                # elif 150<mean_val<159:
+                #     cell_state = "90%live"
+                #     cell_state =90
+                #     #print(cell_state)
+                    
+                # elif 160<mean_val<256:
+                #     cell_state = "100%live"
+                #     cell_state =100
+                #     #print(cell_state)
+                
+                
+                
+                if Debug:
+                    crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
+                    print("mean val for file: "+ filename +"is: "+ str(mean_val))
+                    cv2.imshow('single cell',crop_img)
+                    cv2.waitKey()
+                    cv2.imshow('masked_image',mask)
+                    cv2.waitKey()
+                    cv2.imshow('masked_image_out',masked_image_out)
+                    cv2.waitKey()
+                    cv2.destroyAllWindows()
         
-            masked_image_out = masked_image_out.astype(np.uint8)
-            cv2.imwrite(filename, masked_image_out)
-            #print(cell_state)
-        cell_state_list.append(cell_state)
-        circularity_list.append(circularity)
+                cell_state_list.append(cell_state)
+                circularity_list.append(circularity)
+    masked_image_out = masked_image_out.astype(np.uint8)
+    cv2.imwrite(filename, masked_image_out)
        # print(cell_state_list)
-            #print(kkk)
-	
-    return cell,cell_state_list,circularity_list
+
+    return cell,cell_state_list,circularity_list,contour_area_list
+
 
 
 
