@@ -165,7 +165,7 @@ class Config(object):
     BBOX_STD_DEV = np.array([0.1, 0.1, 0.2, 0.2])
 
     # Max number of final detections
-    DETECTION_MAX_INSTANCES = 35
+    DETECTION_MAX_INSTANCES = 400
 
     # Minimum probability value to accept a detected instance
     # ROIs below this threshold are skipped
