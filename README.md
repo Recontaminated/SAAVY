@@ -1,6 +1,5 @@
-# kylieDataAnylasis
-This is not ment for poeple to run, it will very likely not work nor is the code clean or optimized. 
-It's just for poeple who want to look under the hood for our frontend at {it doesnt exist yet}
+# kylieDataAnylasis 
+For Poeple who want to look under the hood for our web frontend at {it doesnt exist yet}
 
 
 Annotation: Annotate(polygon mask) the files using makesenseai tool and download the annottaion as vgg json format
