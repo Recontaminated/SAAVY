@@ -5,17 +5,19 @@ import datetime
 import numpy as np
 import skimage.draw
 
+from tensorflow import keras
 
 from tensorflow.compat.v1 import ConfigProto
 from tensorflow.compat.v1 import InteractiveSession
+
 config = ConfigProto()
 config.gpu_options.allow_growth = True
 session = InteractiveSession(config=config)
 
-
 from warnings import filterwarnings
+
 filterwarnings(action='ignore', category=DeprecationWarning, message='`np.bool` is a deprecated alias')
-#config.gpu_options.allow_growth = True
+# config.gpu_options.allow_growth = True
 # Root directory of the project
 ROOT_DIR = os.path.abspath("./")
 
@@ -30,6 +32,7 @@ COCO_WEIGHTS_PATH = os.path.join(ROOT_DIR, "mask_rcnn_coco.h5")
 # Directory to save logs and model checkpoints, if not provided
 # through the command line argument --logs
 DEFAULT_LOGS_DIR = os.path.join(ROOT_DIR, "logs")
+
 
 ############################################################
 #  Configurations
@@ -60,7 +63,7 @@ class CustomConfig(Config):
 ############################################################
 #  Dataset
 ############################################################
-#annotation_via.json
+# annotation_via.json
 class CustomDataset(utils.Dataset):
 
     def load_custom(self, dataset_dir, subset):
@@ -70,51 +73,51 @@ class CustomDataset(utils.Dataset):
         """
         # Add classes according to the numbe of classes required to detect
         self.add_class("custom", 1, "Cell")
-        #self.add_class("custom",2,"Dead")
-       
+        # self.add_class("custom",2,"Dead")
+
         # Train or validation dataset?
         assert subset in ["train", "val"]
         dataset_dir = os.path.join(dataset_dir, subset)
         # We mostly care about the x and y coordinates of each region
         # Note: In VIA 2.0, regions was changed from a dict to a list.
-        annotations = json.load(open(os.path.join(dataset_dir, "jeremyAnnotations.json")))
-        #annotations = list(annotations.values())  # don't need the dict keys
+        annotations = json.load(open(os.path.join(dataset_dir, "output.json")))
+        # annotations = list(annotations.values())  # don't need the dict keys
         annotations = list(annotations['_via_img_metadata'].values())
-        
-        #print(annotations)
+
+        # print(annotations)
         # The VIA tool saves images in the JSON even if they don't have any
         # annotations. Skip unannotated images.
         annotations = [a for a in annotations if a['regions']]
-        #print(annotations)
+        # print(annotations)
         # Add images
         for a in annotations:
             # Get the x, y coordinaets of points of the polygons that make up
             # the outline of each object instance. These are stores in the
             # shape_attributes (see json format above)
             # The if condition is needed to support VIA versions 1.x and 2.x.
-            #polygons = [r['shape_attributes'] for r in a['regions'].values()]
+            # polygons = [r['shape_attributes'] for r in a['regions'].values()]
             polygons = [r['shape_attributes'] for r in a['regions']]
-            #print(polygons)
-            
-            #labelling each class in the given image to a number
-            #custom = [s['region_attributes'] for s in a['regions'].values()]
+            # print(polygons)
+
+            # labelling each class in the given image to a number
+            # custom = [s['region_attributes'] for s in a['regions'].values()]
             custom = [s['region_attributes'] for s in a['regions']]
-            
-            #custom = [r['region_attributes']['type'] if 'type' in r['region_attributes'] 
-                                          #else r['region_attributes']['category_id'] for r in a['regions']]
-            
-            #print(".............",custom)
-            #print(kkk)
-            num_ids=[]
-            #Add the classes according to the requirement
+
+            # custom = [r['region_attributes']['type'] if 'type' in r['region_attributes']
+            # else r['region_attributes']['category_id'] for r in a['regions']]
+
+            # print(".............",custom)
+            # print(kkk)
+            num_ids = []
+            # Add the classes according to the requirement
             for n in custom:
                 try:
                     # if n['label']=='Cell':
-                        #print("7777777777777777777777777777777777777777777777777777777777777777777777")
-                        num_ids.append(1)                                         
+                    # print("7777777777777777777777777777777777777777777777777777777777777777777777")
+                    num_ids.append(1)
                 except:
                     pass
-            #print(num_ids)
+            # print(num_ids)
 
             # load_mask() needs the image size to convert polygons to masks.
             # Unfortunately, VIA doesn't include it in JSON, so we must read
@@ -122,16 +125,15 @@ class CustomDataset(utils.Dataset):
             image_path = os.path.join(dataset_dir, a['filename'])
             image = skimage.io.imread(image_path)
             height, width = image.shape[:2]
-            print(".........................",height,width)
-            #print(kkk)
+            print(".........................", height, width)
+            # print(kkk)
             self.add_image(
-                source = "custom",
+                source="custom",
                 image_id=a['filename'],  # use file name as a unique image id
                 path=image_path,
                 width=width, height=height,
                 polygons=polygons,
                 num_ids=num_ids)
-                
 
     def load_mask(self, image_id):
         """Generate instance masks for an image.
@@ -144,13 +146,13 @@ class CustomDataset(utils.Dataset):
         image_info = self.image_info[image_id]
         if image_info["source"] != "custom":
             return super(self.__class__, self).load_mask(image_id)
-        num_ids = image_info['num_ids']	
-        #print("Here is the numID",num_ids)
+        num_ids = image_info['num_ids']
+        # print("Here is the numID",num_ids)
 
         # Convert polygons to a bitmap mask of shape
         # [height, width, instance_count]
         info = self.image_info[image_id]
-        #print("9999999999",info)
+        # print("9999999999",info)
         mask = np.zeros([info["height"], info["width"], len(info["polygons"])],
                         dtype=np.uint8)
         for i, p in enumerate(info["polygons"]):
@@ -160,15 +162,14 @@ class CustomDataset(utils.Dataset):
 
         # Return mask, and array of class IDs of each instance. Since we have
         # one class ID only, we return an array of 1s
-        #num_ids = np.array(num_ids, dtype=np.int32)
-        #num_ids =info[
-        
+        # num_ids = np.array(num_ids, dtype=np.int32)
+        # num_ids =info[
 
-       # print(num_ids)
-        #print(kkkk)
+        # print(num_ids)
+        # print(kkkk)
 
         return mask.astype(np.bool), np.array(num_ids, dtype=np.int32)
-        #return mask, num_ids#.astype(np.bool), np.ones([mask.shape[-1]], dtype=np.int32), 
+        # return mask, num_ids#.astype(np.bool), np.ones([mask.shape[-1]], dtype=np.int32),
 
     def image_reference(self, image_id):
         """Return the path of the image."""
@@ -196,10 +197,12 @@ def train(model):
     # COCO trained weights, we don't need to train too long. Also,
     # no need to train all layers, just the heads should do it.
     print("Training network heads")
-    model.train(dataset_train,dataset_val,
+    # train and log data to tensorboard callback
+    model.train(dataset_train, dataset_val,
                 learning_rate=config.LEARNING_RATE,
-                epochs=15,
-                layers='heads')
+                epochs=20,
+                layers='heads',
+                )
 
 
 def color_splash(image, mask):
@@ -309,8 +312,8 @@ if __name__ == '__main__':
     if args.command == "train":
         assert args.dataset, "Argument --dataset is required for training"
     elif args.command == "splash":
-        assert args.image or args.video,\
-               "Provide --image or --video to apply color splash"
+        assert args.image or args.video, \
+            "Provide --image or --video to apply color splash"
 
     print("Weights: ", args.weights)
     print("Dataset: ", args.dataset)
@@ -325,6 +328,8 @@ if __name__ == '__main__':
             # one image at a time. Batch size = GPU_COUNT * IMAGES_PER_GPU
             GPU_COUNT = 1
             IMAGES_PER_GPU = 1
+
+
         config = InferenceConfig()
     config.display()
 
@@ -337,9 +342,9 @@ if __name__ == '__main__':
                                   model_dir=args.logs)
 
     # Select weights file to load
-    if args.weights.lower() == "new":	
-        print("weight path entered")	
-        print(NEW_WEIGHTS_PATH)	
+    if args.weights.lower() == "new":
+        print("weight path entered")
+        print(NEW_WEIGHTS_PATH)
         weights_path = NEW_WEIGHTS_PATH
     if args.weights.lower() == "coco":
         weights_path = COCO_WEIGHTS_PATH

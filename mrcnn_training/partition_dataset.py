@@ -15,7 +15,7 @@ def iterate_dir(source, ratio):
     #test_dir = os.path.join(source, 'test')
     train_dir ="./main/dataset/train"
     test_dir = "./main/dataset/val"
-
+    
     if not os.path.exists(train_dir):
         os.makedirs(train_dir)
     if not os.path.exists(test_dir):
