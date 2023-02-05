@@ -12,6 +12,8 @@ bfg.jar
 
 **.h5
 *.h5
+**.tiff
+**.jpg
 
 # Distribution / packaging
 .Python
@@ -159,3 +161,5 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 mrcnn_training/main/Mask_RCNN/Analysis_out.csv
+mrcnn_training/main/Mask_RCNN/out/image_239.zip
+mrcnn_training/main/Mask_RCNN/profile.prof
