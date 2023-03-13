@@ -85,19 +85,14 @@ def maskBackground(image, boxes, masks, class_ids, scores, threshold):
             masked_image_fill = apply_mask(masked_image_fill, mask, color)
             masked_image_fill = masked_image_fill.astype(np.uint8)
 
-            thickness = 2
-            masked_image_out = None
             for verts in contours:
                 # Subtract the padding and flip (y, x) to (x, y)
                 verts = np.fliplr(verts) - 1
                 verts = np.array([verts], np.int32)
                 verts = verts.reshape((-1, 1, 2))
-                clr = (color[0] * 250)
-                clr = [0, 250, 0]
-                masked_image_out = cv2.polylines(masked_image, [verts], True, clr, thickness)
-                masked_image_out_cell_fill = cv2.fillPoly(masked_image_fill, [verts], (255, 20, 20))
-                masked_image_out = masked_image_out.astype(np.uint8)
-            return masked_image_out_cell_fill
+
+                masked_image_fill = cv2.fillPoly(masked_image_fill, [verts], (255, 20, 20))
+    return masked_image_fill
 
 
 def get_bkgrnd_intensity(img_name, mask):
@@ -158,8 +153,10 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
         return 0, [], [], [], -1, -1
     else:
         assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0]
-    bkgrn, bkgrnd_pix_analyzed = get_bkgrnd_intensity(image,
-                                                      maskBackground(image, boxes, masks, class_ids, scores, threshold))
+
+    maskedBackground = maskBackground(image, boxes, masks, class_ids, scores, threshold)
+
+    bkgrn, bkgrnd_pix_analyzed = get_bkgrnd_intensity(image,maskedBackground)
 
     grey_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     orig_img = image.astype(np.uint8)
@@ -208,7 +205,7 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 verts = np.array([verts], np.int32)
                 verts = verts.reshape((-1, 1, 2))
                 clr = (color[0] * 250)
-                clr = [250, 0, 0]
+                clr = [0, 250, 0]
                 masked_image_out = cv2.polylines(masked_image, [verts], True, clr, thickness)
                 mask = np.zeros(grey_img.shape, np.uint8)
                 cv2.drawContours(mask, [verts], 0, 255, -1)

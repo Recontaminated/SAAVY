@@ -1,6 +1,13 @@
-inputDirectory = r"C:\Users\minec\OneDrive\Documents\GitHub\kylieDataAnylasis\mrcnn_training\main\Mask_RCNN\input"
+import argparse
 from genericpath import isfile
 import os
+
+parser = argparse.ArgumentParser(
+        description="Pad file names with 0's")
+parser.add_argument('--input', help='Path to input directory')
+args = parser.parse_args()
+assert args.input is not None, "Please provide an input directory"
+inputDirectory = args.input
 
 from cv2 import split
 for file in os.listdir(inputDirectory):

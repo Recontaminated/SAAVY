@@ -1,0 +1,4 @@
+Image_Name,Image_Resolution,Organoid Count,image pct Analyzed,Smallest organoid (px),largest organoid (px),lowest viability (pct),highest viability (pct),Average_Circularity(ideal circle=0),Average area um (calculated),Background raw intensity (0-255) ,Average raw intenisty (0-255),Average_Viability (pct)
+image_000.jpg,1210x1290,33,18.665320955124123,458.5,24639.0,0.0,100.0,0.479,1168.281,198.5747405464251,69.65792169567564,49.16715031267463
+image_001.jpg,1210x1290,44,17.615311758985328,262.5,17063.5,0.0,100.0,0.491,825.497,190.0401453766537,63.13984801531659,51.37942727895086
+image_002.jpg,1210x1290,30,13.534327797076134,14.0,13440.0,0.0,100.0,0.507,926.779,200.3178008748879,36.80055871683109,37.4741686955815
