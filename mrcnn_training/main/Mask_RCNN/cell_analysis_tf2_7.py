@@ -59,7 +59,7 @@ class Config(Config):
     IMAGES_PER_GPU = 1
     GPU_COUNT = 1
     NUM_CLASSES = 2
-    DETECTION_MIN_CONFIDENCE = 0.9
+    DETECTION_MIN_CONFIDENCE = 0.95
     # IMAGE_MIN_DIM = 832
     # IMAGE_MAX_DIM = 832
 
@@ -174,4 +174,4 @@ for filename in os.listdir(input_directory):
             columns =['Image_Name','Image_Resolution',"Organoid Count","image pct Analyzed",'Smallest organoid (px)','largest organoid (px)','lowest viability (pct)','highest viability (pct)','Average_Circularity(ideal circle=0)','Average area um (calculated)',"Background raw intensity (0-255) ","Average raw intenisty (0-255)",'Average_Viability (pct)'])
 
  
-        df.to_csv(save_directory + "Analysis_output2.csv", encoding='utf-8',index =False)
+        df.to_csv(save_directory + "Analysis_output.csv", encoding='utf-8',index =False)

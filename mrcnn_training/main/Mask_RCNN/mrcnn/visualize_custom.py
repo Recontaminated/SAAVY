@@ -84,7 +84,6 @@ def maskBackground(image, boxes, masks, class_ids, scores, threshold):
             masked_image = masked_image.astype(np.uint8)
             masked_image_fill = apply_mask(masked_image_fill, mask, color)
             masked_image_fill = masked_image_fill.astype(np.uint8)
-
             for verts in contours:
                 # Subtract the padding and flip (y, x) to (x, y)
                 verts = np.fliplr(verts) - 1
@@ -155,11 +154,9 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
         assert boxes.shape[0] == masks.shape[-1] == class_ids.shape[0]
 
     maskedBackground = maskBackground(image, boxes, masks, class_ids, scores, threshold)
-
     bkgrn, bkgrnd_pix_analyzed = get_bkgrnd_intensity(image,maskedBackground)
 
     grey_img = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    orig_img = image.astype(np.uint8)
     masked_image = image.astype(np.uint32).copy()
     # dead = 0
     # live = 0
@@ -204,15 +201,15 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 verts = np.fliplr(verts) - 1
                 verts = np.array([verts], np.int32)
                 verts = verts.reshape((-1, 1, 2))
-                clr = (color[0] * 250)
                 clr = [0, 250, 0]
                 masked_image_out = cv2.polylines(masked_image, [verts], True, clr, thickness)
                 mask = np.zeros(grey_img.shape, np.uint8)
+
                 cv2.drawContours(mask, [verts], 0, 255, -1)
-                x, y, w, h = cv2.boundingRect(verts)  # offsets - with this you get 'mask'
+                x, y, w, h = cv2.boundingRect(verts)
                 masked_image_out = cv2.putText(masked_image_out, str(i), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.8,
                                                (0, 0, 0), 2)
-                crop_img = orig_img[y:y + h, x:x + w]
+                # crop_img = orig_img[y:y + h, x:x + w]
                 # cv2.imshow('cutted contour',crop_img)
                 # cv2.waitKey()
 
@@ -230,6 +227,8 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 # min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(grey_img,mask = mask)
                 # #print("min_max values:",min_val,max_val)
                 """ Average intensity value of a cell """
+                # plt.imshow(mask, cmap='gray')
+                # plt.show()
                 mean_val = cv2.mean(grey_img, mask=mask)
                 mean_val = list(mean_val)
                 mean_val = round(mean_val[0])
@@ -283,16 +282,7 @@ def display_instances(image, boxes, masks, class_ids, scores, threshold, filenam
                 # TODO change max dead 60 pct to dynamically daluclated one from backgorudn
                 cell_state = ((60 - np.clip((bkgrn - 15 - mean_val), 0, 60)) / 60) * 100
 
-                if Debug:
-                    crop_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-                    print("mean val for file: " + filename + "is: " + str(mean_val))
-                    cv2.imshow('single cell', crop_img)
-                    cv2.waitKey()
-                    cv2.imshow('masked_image', mask)
-                    cv2.waitKey()
-                    cv2.imshow('masked_image_out', masked_image_out)
-                    cv2.waitKey()
-                    cv2.destroyAllWindows()
+
 
                 masked_image_out = cv2.putText(masked_image_out, str(cell_state.round(2)), (int(x + 10), int(y + 20)),
                                                cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)

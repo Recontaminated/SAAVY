@@ -1,2 +1,0 @@
-Image_Name,Image_Resolution,Organoid Count,image pct Analyzed,Smallest organoid (px),largest organoid (px),lowest viability (pct),highest viability (pct),Average_Circularity(ideal circle=0),Average area um (calculated),Background raw intensity (0-255) ,Average raw intenisty (0-255),Average_Viability (pct)
-image_39..jpg,1210x1290,18,9.098339904503787,430.5,16486.0,42.68903644857185,100.0,0.526,1036.037,197.3865781308569,74.86925057111144,72.22587559377472
