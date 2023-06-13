@@ -20,7 +20,7 @@ for file in os.listdir(path):
     img = cv2.imread(f)
     # resized = cv2.resize(img,(1360,1024), interpolation=cv2.INTER_AREA)
     resized = cv2.resize(img,None,fx=0.4, fy=0.4, interpolation=cv2.INTER_AREA)
-
+    file = file.split(".")[0] + ".png"
     newName = f"{save_directory}/{file}"
     print(newName)
     cv2.imwrite(newName, resized)

@@ -18,6 +18,9 @@ import random
 
 # import scripts.pytorchVisionScripts.utils as utils
 # from scripts.pytorchVisionScripts.engine import *
+from torch.utils.tensorboard import SummaryWriter
+writer = SummaryWriter()
+
 
 import torchvision.transforms.functional as TF
 from scripts import utils
@@ -32,27 +35,30 @@ class OrganoidDataset(torch.utils.data.Dataset):
 
     def loadMasks(self, root):
         masks = {}
-        with open(os.path.join(root, "via_region_data.json")) as f:
+        fsImages = os.listdir(os.path.join(root))
+        with open(os.path.join(root, self.via)) as f:
             data = json.load(f)
             for key in data:
-                if data[key]["filename"] in self.imgs:
+                if data[key]["filename"] in fsImages:
                     #check if regions exist is empty and if so remove the image from the list
                     #TODO: make it so that null images can be used for training
                     if data[key]["regions"] == []:
-                        self.imgs.remove(data[key]["filename"])
+                        # self.imgs.remove(data[key]["filename"])
+                        pass
                     else:
                         masks[data[key]["filename"]] = data[key]["regions"]
-
+                        
         return masks
-    def __init__(self, root, shouldtransforms=False):
+    def __init__(self, root, via ,shouldtransforms=False):
         self.root = root
+        self.via = via
         self.shouldtransforms = shouldtransforms
         # load all image files, sorting them to
         # ensure that they are aligned
         files = os.listdir(os.path.join(root)) 
         #ignrore all .json files
-        self.imgs = [file for file in files if not file.endswith(".json")]
         self.masks = self.loadMasks(root)
+        self.imgs = list(self.masks.keys())
     def transform(self, image, mask):
         # # Resize
         # resize = transforms.Resize(size=(520, 520))
@@ -86,9 +92,9 @@ class OrganoidDataset(torch.utils.data.Dataset):
         # mask is a dictionary of all x points and all y points. we have to convert teese to a binary mask
         if self.shouldtransforms:
             img, target = self.transform(img, mask)
-
         masks = []
         for key in mask:
+
             points = key["shape_attributes"]
             x = points["all_points_x"]
             y = points["all_points_y"]
@@ -140,23 +146,7 @@ def main():
     device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
 
-    # Setup the dataset to correctly import VIA annotated images
 
-    # In[ ]:
-
-
-
-
-
-    # In[3]:
-
-
-
-
-                
-
-
-    # In[4]:
 
 
     def buildModel(numClasses):
@@ -167,9 +157,6 @@ def main():
         hiddenLayer = 256
         model.roi_heads.mask_predictor = MaskRCNNPredictor(inFeaturesMask, hiddenLayer, numClasses)
         return model
-
-
-    # In[5]:
 
 
 
@@ -185,8 +172,6 @@ def main():
 
 
 
-
-    # In[6]:
 
 
     # split the dataset in train and test set
@@ -210,13 +195,12 @@ def main():
         
     #we have a train test split so we dont need to do this
 
-    dataset = OrganoidDataset("trainingData",False)
-    validationDataset = OrganoidDataset("trainingData",False)
+    dataset = OrganoidDataset("trainingData","SAMY Annotations 3-33-23_json (1).json",False)
+    validationDataset = OrganoidDataset("validationData","validation.json",False)
     dataLoader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=0, collate_fn=utils.collate_fn)
     validationDataLoader = torch.utils.data.DataLoader(validationDataset, batch_size=1, shuffle=False, num_workers=0, collate_fn=utils.collate_fn)
 
 
-    # In[8]:
 
 
     num_classes = 2
@@ -226,20 +210,21 @@ def main():
     model.to(device)
 
     params = [p for p in model.parameters() if p.requires_grad]
-    optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
-    lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
+    optimizer = torch.optim.SGD(params, lr=0.001, momentum=0.9, weight_decay=0.0001)
+    # optimizer = torch.optim.SGD(params, lr=0.005, momentum=0.9, weight_decay=0.0005)
+    # lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
 
 
-    # In[9]:
 
 
     num_epochs = 15
 
     for epoch in range(num_epochs):
         # train for one epoch, printing every 10 iterations
-        train_one_epoch(model, optimizer, dataLoader, device, epoch, print_freq=1)
+
+        train_one_epoch(model, optimizer, dataLoader, device, epoch, writer, print_freq=1)
         # update the learning rate
-        lr_scheduler.step()
+        # lr_scheduler.step()
         # evaluate on the test dataset
         evaluate(model,validationDataLoader, device=device)
 
@@ -248,6 +233,7 @@ def main():
 
 # if __name__ == "__main__":
 main()
+writer.flush()
 
 
 

@@ -4,17 +4,17 @@ import time
 
 import torch
 import torchvision.models.detection.mask_rcnn
-import utils
+from . import utils
 from scripts.coco_eval import CocoEvaluator
 from scripts.coco_utils import get_coco_api_from_dataset
 
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, scaler=None):
+def train_one_epoch(model, optimizer, data_loader, device, epoch,writer, print_freq,scaler=None):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}"))
     header = f"Epoch: [{epoch}]"
-
+    total_loss = 0
     lr_scheduler = None
     if epoch == 0:
         warmup_factor = 1.0 / 1000
@@ -41,7 +41,8 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, sc
             print(f"Loss is {loss_value}, stopping training")
             print(loss_dict_reduced)
             sys.exit(1)
-
+    
+        total_loss += loss_value
         optimizer.zero_grad()
         if scaler is not None:
             scaler.scale(losses).backward()
@@ -56,7 +57,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch, print_freq, sc
 
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
-
+    writer.add_scalar("Loss/train", total_loss/len(data_loader), epoch)
     return metric_logger
 
 
@@ -86,7 +87,7 @@ def evaluate(model, data_loader, device):
     iou_types = _get_iou_types(model)
     coco_evaluator = CocoEvaluator(coco, iou_types)
 
-    for images, targets in metric_logger.log_every(data_loader, 100, header):
+    for images, targets in metric_logger.log_every(data_loader, 10, header):
         images = list(img.to(device) for img in images)
 
         if torch.cuda.is_available():

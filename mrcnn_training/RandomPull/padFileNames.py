@@ -10,6 +10,7 @@ assert args.input is not None, "Please provide an input directory"
 inputDirectory = args.input
 
 from cv2 import split
+os.makedirs(os.path.join(inputDirectory, "out"), exist_ok=True)
 for file in os.listdir(inputDirectory):
     # get the file name
     if not isfile(os.path.join(inputDirectory, file)):
@@ -18,11 +19,11 @@ for file in os.listdir(inputDirectory):
     fileName = os.path.splitext(file)[0][6:]
     # remove last character
     print("fileName: ", fileName)
-    fileName = fileName[:-1]
+    fileName = fileName
     print("fileName: ", fileName)
     # add 0 to the front
 
     fileName = fileName.zfill(3)
-    rename = "image_" + fileName + ".jpg"
+    rename = r"out\image_" + fileName + ".png"
     print("renaming: ", file, " to: ", rename)
     os.rename(os.path.join(inputDirectory, file), os.path.join(inputDirectory, rename))
