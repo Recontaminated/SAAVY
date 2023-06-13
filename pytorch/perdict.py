@@ -137,14 +137,21 @@ def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=
         imgSave = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         imgSave = imgSave * masks[i]
         viability, circularity, averageIntensity, area = analyzeCell(imgSave, backgroundIntesity)
+
+        if area == 0:
+            print("file is nan: ", img_path)
+            continue
         cv2.putText(img, str(round(viability, 2)), (int(x+ 10), int(y + 0)),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
         cv2.putText(img, str(confidence_scores[i]), (int(x + 10), int(y + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
         masked_image_out = cv2.putText(img, str(round(averageIntensity, 2)), (int(x + 20), int(y + 30)),
                                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
+        if viability == np.nan:
+            print("file is nan: ", img_path)
         cell_meta = {"viability": viability, "circularity": circularity, "averageIntensity": averageIntensity, "area": area}
         cells.append(cell_meta)
     print("background intensity: ", backgroundIntesity)
+    
     return img, cells, backgroundIntesity
 
 
@@ -173,7 +180,7 @@ def calcBackgroundIntensity(img, masks) -> float:
     # plt.show()
     imgSave = imgSave.flatten()
 
-    masked = imgSave[imgSave > 5] # ignore the completely black background
+    masked = imgSave[imgSave > 15] # ignore the completely black background
   
     masked = masked[masked != 255]#ignore the status bar white
     # ignore everything greater than 250
@@ -190,12 +197,17 @@ def analyzeCell(cell, backgroundIntensity):
     :return: average viability, area, circulatriy
     """
     area = np.count_nonzero(cell)
-    cell = cell[cell != 0] # ignore the completely black background
+    cell = cell[cell > 15] # ignore the completely black background
     averageIntensity = np.average(cell)
     cell_state = ((60 - np.clip((backgroundIntensity - 15 - averageIntensity), 0, 60)) / 60) * 100
 
     # circularity = cv2.Laplacian(cell, cv2.CV_64F).var()
     circularity = 0
+
+    if area == 0 or cell_state == np.nan or cell_state is None:
+        print("cell state is nan")
+        return np.nan, np.nan, np.nan,0
+    
 
     return cell_state, circularity, averageIntensity, area
 
@@ -205,7 +217,7 @@ def analyzeCell(cell, backgroundIntensity):
 # # make a new folder called out
 # if not os.path.exists("out"):
 #     os.mkdir("out")
-# #delete all files in out
+# #delete all files in outƣ
 # check = input("delete all files in out? (y/n)")
 # if not check == "y":
 #     exit()
@@ -253,11 +265,22 @@ for i in range(len(images)):
 df = pd.DataFrame(columns=["file", "count", "avg_viability", "avg_circularity", "avg_intensity", "radius (area / pi)"])
 for image in images_meta:
     num_cells = len(image["cells"])
-    avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
-    avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(2) 
-    avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2) 
-    avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2) 
-    avg_radius = (np.sqrt(avg_area / np.pi)).round(2)
+   
+    if image["cells"] == []:
+        avg_viability = -1
+        avg_circularity = -1
+        avg_intensity = -1
+        avg_area = -1
+        avg_radius = -1
+    else:
+        # print(image["cells"])
+        # print(image["file"])    
+        avg_viability = np.average([cell["viability"] for cell in image["cells"]], weights=[cell["area"] for cell in image["cells"]]).round(2)
+        # avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
+        avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(2) 
+        avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2) 
+        avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2) 
+        avg_radius = (np.sqrt(avg_area / np.pi)).round(2)
 
 
     df = df.append({"file": image["file"],"count": num_cells, "background_intenstiy" : image["backgroundIntensity"], "avg_viability": avg_viability, "avg_circularity": avg_circularity, "avg_intensity": avg_intensity, "radius (area / pi)": avg_radius}, ignore_index=True)
