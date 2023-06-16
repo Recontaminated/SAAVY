@@ -14,7 +14,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # device = torch.device('cpu')
 
 print("Loading model...")
-model = torch.load("mask-rcnn-pedestrian.pt")
+model = torch.load("models/trainedLongerModelv2.pt")
 print("Model loaded.")
 print("running on device: ", device)
 model.to(device)
@@ -131,12 +131,11 @@ def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=
         contours, _ = cv2.findContours(masks[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # Draw the contours on the image
-        cv2.drawContours(img, contours, -1, (0, 255, 0), rect_th)
 
         #get the average intensity of all pixels within mask
         imgSave = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         imgSave = imgSave * masks[i]
-        viability, circularity, averageIntensity, area = analyzeCell(imgSave, backgroundIntesity)
+        viability, circularity, averageIntensity, area, raw_intensity = analyzeCell(imgSave, backgroundIntesity)
 
         if area == 0:
             print("file is nan: ", img_path)
@@ -146,9 +145,10 @@ def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=
         cv2.putText(img, str(confidence_scores[i]), (int(x + 10), int(y + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
         masked_image_out = cv2.putText(img, str(round(averageIntensity, 2)), (int(x + 20), int(y + 30)),
                                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
+        cv2.drawContours(img, contours, -1, (0, 255, 0), rect_th)
         if viability == np.nan:
             print("file is nan: ", img_path)
-        cell_meta = {"viability": viability, "circularity": circularity, "averageIntensity": averageIntensity, "area": area}
+        cell_meta = {"viability": viability, "circularity": circularity, "averageIntensity": averageIntensity, "area": area, "raw_intensity": raw_intensity}
         cells.append(cell_meta)
     print("background intensity: ", backgroundIntesity)
     
@@ -180,7 +180,7 @@ def calcBackgroundIntensity(img, masks) -> float:
     # plt.show()
     imgSave = imgSave.flatten()
 
-    masked = imgSave[imgSave > 15] # ignore the completely black background
+    masked = imgSave[imgSave > 12] # ignore the completely black background
   
     masked = masked[masked != 255]#ignore the status bar white
     # ignore everything greater than 250
@@ -197,99 +197,92 @@ def analyzeCell(cell, backgroundIntensity):
     :return: average viability, area, circulatriy
     """
     area = np.count_nonzero(cell)
-    cell = cell[cell > 15] # ignore the completely black background
+    plt.imshow(cell, cmap="gray")
+    cell = cell[cell > 0] # ignore the completely black background
     averageIntensity = np.average(cell)
-    cell_state = ((60 - np.clip((backgroundIntensity - 15 - averageIntensity), 0, 60)) / 60) * 100
+    if backgroundIntensity < 180: #  backgtround has lots of noise
+        cell_state = ((60 - np.clip((backgroundIntensity - 15 - averageIntensity), 0, 60)) / 60) * 100
+    else:
+        cell_state = ((50 - np.clip((backgroundIntensity - 25 - averageIntensity), 0, 50)) / 50) * 100
 
     # circularity = cv2.Laplacian(cell, cv2.CV_64F).var()
     circularity = 0
 
-    if area == 0 or cell_state == np.nan or cell_state is None:
+    if area == 0 or cell_state == np.nan or cell_state is None: #somehow model can output a cell with no area
         print("cell state is nan")
-        return np.nan, np.nan, np.nan,0
+        return np.nan, np.nan, np.nan,0, np.nan
     
 
-    return cell_state, circularity, averageIntensity, area
+    return cell_state, circularity, averageIntensity, area, averageIntensity
 
 
 
 
-# # make a new folder called out
-# if not os.path.exists("out"):
-#     os.mkdir("out")
-# #delete all files in outƣ
-# check = input("delete all files in out? (y/n)")
-# if not check == "y":
-#     exit()
-# for file in os.listdir("out"):
-#
-#     os.remove("out\\" + file)
+if __name__ == '__main__':
+    # folder = r"C:\Users\minec\Desktop\figure images"
+    folder = r"C:\Users\minec\Desktop\mappingsCSV"
+    # folder = r"validationData"
+    files = os.listdir(folder)
+
+    timeStart = time.time()
+    # for file in files:
+    images = []
+    #make a new pandas DF
+    images_meta = []
+
+    for file in tqdm(files):
+        if not (file.endswith('.jpg') or file.endswith('.png')):
+            continue
+        print(file)
+        image, cells, backgroundIntensity = segment_instance(folder + "\\" + file, confidence_thresh=0.80)
+        images_meta.append({"file": file, "cells": cells, "backgroundIntensity": backgroundIntensity})
+        images.append(image)
 
 
+    timeEnd = time.time()
+    print("time taken: ", timeEnd - timeStart)
+    print("time taken per image: ", (timeEnd - timeStart) / len(files))
+
+    path = os.path.join(folder, "out")
+    if not os.path.exists(path):
+        os.mkdir(path)
+    for i in range(len(images)):
+        try:
+            cv2.imwrite(os.path.join(path,files[i]), images[i])
+        except:
+            print("error saving image: ", files[i])
+
+    #make a new dataframe with empty everything
+    df = pd.DataFrame(columns=["file", "count", "avg_viability", "avg_circularity", "avg_intensity", "radius (area / pi)"])
+    for image in images_meta:
+        num_cells = len(image["cells"])
+
+        if image["cells"] == []:
+            avg_viability = -1
+            avg_circularity = -1
+            avg_intensity = -1
+            avg_area = -1
+            avg_radius = -1
+            avg_raw_intensity = -1
+        else:
+            # print(image["cells"])
+            # print(image["file"])
+            avg_viability = np.average([cell["viability"] for cell in image["cells"]], weights=[cell["area"] for cell in image["cells"]]).round(2)
+            # avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
+            avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(2)
+            avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2)
+            avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2)
+            avg_radius = (np.sqrt(avg_area / np.pi)).round(2)
+            avg_raw_intensity = np.average([cell["raw_intensity"] for cell in image["cells"]]).round(2)
 
 
-# folder = r"C:\Users\minec\Desktop\figure images"
-folder = r"C:\Users\minec\Desktop\mappingsCSV"
-# folder = r"validationData"
-files = os.listdir(folder)
-
-timeStart = time.time()
-# for file in files:
-images = []
-#make a new pandas DF
-images_meta = []
-
-for file in tqdm(files):
-    if not (file.endswith('.jpg') or file.endswith('.png')):
-        continue
-    print(file)
-    image, cells, backgroundIntensity = segment_instance(folder + "\\" + file, confidence_thresh=0.8)
-    images_meta.append({"file": file, "cells": cells, "backgroundIntensity": backgroundIntensity})
-    images.append(image)
-
-
-timeEnd = time.time()
-print("time taken: ", timeEnd - timeStart)
-print("time taken per image: ", (timeEnd - timeStart) / len(files))
-
-path = os.path.join(folder, "out")
-if not os.path.exists(path):
-    os.mkdir(path)
-for i in range(len(images)):
+        df = df.append({"file": image["file"],"count": num_cells, "background_intenstiy" : image["backgroundIntensity"], "avg_viability": avg_viability, "avg_circularity": avg_circularity, "avg_intensity": avg_intensity, "radius (area / pi)": avg_radius, "raw_intensity":avg_raw_intensity}, ignore_index=True)
     try:
-        cv2.imwrite(os.path.join(path,files[i]), images[i])
-    except:
-        print("error saving image: ", files[i])
-
-#make a new dataframe with empty everything
-df = pd.DataFrame(columns=["file", "count", "avg_viability", "avg_circularity", "avg_intensity", "radius (area / pi)"])
-for image in images_meta:
-    num_cells = len(image["cells"])
-   
-    if image["cells"] == []:
-        avg_viability = -1
-        avg_circularity = -1
-        avg_intensity = -1
-        avg_area = -1
-        avg_radius = -1
-    else:
-        # print(image["cells"])
-        # print(image["file"])    
-        avg_viability = np.average([cell["viability"] for cell in image["cells"]], weights=[cell["area"] for cell in image["cells"]]).round(2)
-        # avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
-        avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(2) 
-        avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2) 
-        avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2) 
-        avg_radius = (np.sqrt(avg_area / np.pi)).round(2)
-
-
-    df = df.append({"file": image["file"],"count": num_cells, "background_intenstiy" : image["backgroundIntensity"], "avg_viability": avg_viability, "avg_circularity": avg_circularity, "avg_intensity": avg_intensity, "radius (area / pi)": avg_radius}, ignore_index=True)
-try:
-    df.to_csv(os.path.join(path,"summary.csv"), index=False)
-except PermissionError:
-    print("Please close the summary.csv file. press any key to continue")
-    input()
-    # df.to_csv("out\\summary.csv", index=False)
+        df.to_csv(os.path.join(path,"summary.csv"), index=False)
+    except PermissionError:
+        print("Please close the summary.csv file. press any key to continue")
+        input()
+        # df.to_csv("out\\summary.csv", index=False)
 
 
 
