@@ -14,7 +14,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # device = torch.device('cpu')
 
 print("Loading model...")
-model = torch.load("models/trainedLongerModelv2.pt")
+model = torch.load(r"C:\Users\minec\OneDrive\Documents\GitHub\kylieDataAnylasis\pytorch\models\trainedLongerModelv2.pt")
 print("Model loaded.")
 print("running on device: ", device)
 model.to(device)
@@ -220,8 +220,9 @@ def analyzeCell(cell, backgroundIntensity):
 
 if __name__ == '__main__':
     # folder = r"C:\Users\minec\Desktop\figure images"
-    folder = r"C:\Users\minec\Desktop\mappingsCSV"
+    # folder = r"C:\Users\minec\Desktop\mappingsCSV"
     # folder = r"validationData"
+    folder = r"C:\Users\minec\Downloads\20230405_Longevity_Exports\20230405_Longevity_Exports"
     files = os.listdir(folder)
 
     timeStart = time.time()
