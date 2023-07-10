@@ -14,7 +14,8 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # device = torch.device('cpu')
 
 print("Loading model...")
-model = torch.load("mask-rcnn-pedestrian.pt")
+model = torch.load("models/mask-rcnn-pedestrian.pt")
+# model = torch.load("debug01.pt")
 print("Model loaded.")
 print("running on device: ", device)
 model.to(device)
@@ -128,15 +129,27 @@ def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=
 
         x, y = pt2
         #draw a polygon of the mask
+   
         contours, _ = cv2.findContours(masks[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-
+        if len(contours) == 0:
+            continue 
+        (x, y), (minorAxisLength, majorAxisLength), angle = cv2.fitEllipse(max(contours, key=cv2.contourArea))
+        
+        
+        semi_major_axis = majorAxisLength / 2
+        semi_minor_axis = minorAxisLength / 2
+        circularity = round(np.sqrt(pow(semi_major_axis, 2) - pow(semi_minor_axis, 2)) / semi_major_axis, 2)
         # Draw the contours on the image
         cv2.drawContours(img, contours, -1, (0, 255, 0), rect_th)
 
         #get the average intensity of all pixels within mask
         imgSave = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         imgSave = imgSave * masks[i]
-        viability, circularity, averageIntensity, area = analyzeCell(imgSave, backgroundIntesity)
+
+
+        viability, averageIntensity, area = analyzeCell(imgSave, backgroundIntesity)
+        if area == 0:
+            continue
         cv2.putText(img, str(round(viability, 2)), (int(x+ 10), int(y + 0)),
                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
         cv2.putText(img, str(confidence_scores[i]), (int(x + 10), int(y + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
@@ -194,10 +207,9 @@ def analyzeCell(cell, backgroundIntensity):
     averageIntensity = np.average(cell)
     cell_state = ((60 - np.clip((backgroundIntensity - 15 - averageIntensity), 0, 60)) / 60) * 100
 
-    # circularity = cv2.Laplacian(cell, cv2.CV_64F).var()
-    circularity = 0
+    # circularity = 0
 
-    return cell_state, circularity, averageIntensity, area
+    return cell_state, averageIntensity, area
 
 
 
@@ -219,6 +231,7 @@ def analyzeCell(cell, backgroundIntensity):
 # folder = r"C:\Users\minec\Desktop\figure images"
 folder = r"C:\Users\minec\Desktop\mappingsCSV"
 # folder = r"validationData"
+# folder = r"C:\Users\minec\Downloads\20230405_Longevity_Exports\20230405_Longevity_Exports"
 files = os.listdir(folder)
 
 timeStart = time.time()
@@ -232,7 +245,11 @@ for file in tqdm(files):
         continue
     print(file)
     image, cells, backgroundIntensity = segment_instance(folder + "\\" + file, confidence_thresh=0.8)
-    images_meta.append({"file": file, "cells": cells, "backgroundIntensity": backgroundIntensity})
+    image_total_px = image.shape[0] * image.shape[1]
+    sum_area = sum([cell["area"] for cell in cells])
+    pct_area = sum_area / image_total_px
+
+    images_meta.append({"file": file, "cells": cells, "backgroundIntensity": backgroundIntensity, "pct_area_analyzed": pct_area})
     images.append(image)
 
 
@@ -252,15 +269,23 @@ for i in range(len(images)):
 #make a new dataframe with empty everything
 df = pd.DataFrame(columns=["file", "count", "avg_viability", "avg_circularity", "avg_intensity", "radius (area / pi)"])
 for image in images_meta:
-    num_cells = len(image["cells"])
-    avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
-    avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(2) 
-    avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2) 
-    avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2) 
-    avg_radius = (np.sqrt(avg_area / np.pi)).round(2)
+    if image["cells"] == []:
+        avg_viability = -1
+        avg_circularity = -1
+        avg_intensity = -1
+        avg_area = -1
+       
+    else:
+        num_cells = len(image["cells"])
+        avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
+        avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(5) 
+        avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2) 
+        avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2) 
+
+        
 
 
-    df = df.append({"file": image["file"],"count": num_cells, "background_intenstiy" : image["backgroundIntensity"], "avg_viability": avg_viability, "avg_circularity": avg_circularity, "avg_intensity": avg_intensity, "radius (area / pi)": avg_radius}, ignore_index=True)
+    df = df.append({"file": image["file"],"count": num_cells, "pct_analyzed":image["pct_area_analyzed"]*100,"background_intenstiy" : image["backgroundIntensity"], "avg_viability": avg_viability, "avg_circularity": avg_circularity, "avg_intensity": avg_intensity, "avg_area": avg_area}, ignore_index=True)
 try:
     df.to_csv(os.path.join(path,"summary.csv"), index=False)
 except PermissionError:
