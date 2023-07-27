@@ -14,7 +14,7 @@ device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cp
 # device = torch.device('cpu')
 
 print("Loading model...")
-model = torch.load("models/mask-rcnn-pedestrian.pt")
+model = torch.load("torchDebug01.1.pt")
 # model = torch.load("debug01.pt")
 print("Model loaded.")
 print("running on device: ", device)
@@ -36,14 +36,8 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def get_coloured_mask(mask):
-    """
-    random_colour_masks
-      parameters:
-        - image - predicted masks
-      method:
-        - the masks of each predicted object is given random colour for visualization
-    """
+def get_colored_mask(mask):
+
     colours = [[0, 255, 0], [0, 0, 255], [255, 0, 0], [0, 255, 255], [255, 255, 0], [255, 0, 255], [80, 70, 180],
                [250, 80, 190], [245, 145, 50], [70, 150, 250], [50, 190, 190]]
     r = np.zeros_like(mask).astype(np.uint8)
@@ -56,19 +50,7 @@ def get_coloured_mask(mask):
 
 
 def get_prediction(img_path, confidence):
-    """
-    get_prediction
-      parameters:
-        - img_path - path of the input image
-        - confidence - threshold to keep the prediction or not
-      method:
-        - Image is obtained from the image path
-        - the image is converted to image tensor using PyTorch's Transforms
-        - image is passed through the model to get the predictions
-        - masks, classes and bounding boxes are obtained from the model and soft masks are made binary(0 or 1) on masks
-          ie: eg. segment of cat is made 1 and rest of the image is made 0
-    
-    """
+
     img = Image.open(img_path).convert('RGB')  # get rid of alpha channel
     transform = T.Compose([T.ToTensor()])
     img = transform(img)
@@ -98,20 +80,7 @@ def get_prediction(img_path, confidence):
 
 def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=2, text_th=2) -> tuple[
     Any, Any]:
-    """
-    segment_instance
-      parameters:
-        - img_path - path to input image
-        - confidence- confidence to keep the prediction or not
-        - rect_th - rect thickness
-        - text_size
-        - text_th - text thickness
-      method:
-        - prediction is obtained by get_prediction
-        - each mask is given random color
-        - each mask is added to the image in the ration 1:0.8 with opencv
-        - final output is displayed
-    """
+
     masks, boxes, pred_cls, confidence_scores = get_prediction(img_path, confidence_thresh)
 
     img = cv2.imread(img_path)
@@ -197,11 +166,7 @@ def calcBackgroundIntensity(img, masks) -> float:
     return avg
 
 def analyzeCell(cell, backgroundIntensity):
-    """
 
-    :param cell: organoid
-    :return: average viability, area, circulatriy
-    """
     area = np.count_nonzero(cell)
     cell = cell[cell != 0] # ignore the completely black background
     averageIntensity = np.average(cell)
@@ -229,9 +194,9 @@ def analyzeCell(cell, backgroundIntensity):
 
 
 # folder = r"C:\Users\minec\Desktop\figure images"
-folder = r"C:\Users\minec\Desktop\mappingsCSV"
+# folder = r"C:\Users\minec\Desktop\mappingsCSV"
 # folder = r"validationData"
-# folder = r"C:\Users\minec\Downloads\20230405_Longevity_Exports\20230405_Longevity_Exports"
+folder = r"C:\Users\minec\Downloads\20230405_Longevity_Exports\20230405_Longevity_Exports"
 files = os.listdir(folder)
 
 timeStart = time.time()
