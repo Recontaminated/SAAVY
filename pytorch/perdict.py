@@ -7,7 +7,14 @@ import time
 import typing
 from tqdm import tqdm
 import pandas as pd
-
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("input", help="folder of images to analyze")
+parser.add_argument("output", help="folder to save output images")
+args = parser.parse_args()
+if args.input is None or args.output is None:
+    print("please provide input and output folders")
+    exit()
 
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -91,8 +98,8 @@ def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=
 
 
     for i in range(len(masks)):
-        # rgb_mask = get_coloured_mask(masks[i])
-        # img = cv2.addWeighted(img, 1, rgb_mask, 0.5, 0)
+        rgb_mask = get_colored_mask(masks[i])
+        img = cv2.addWeighted(img, 1, rgb_mask, 0.5, 0)
         pt1 = tuple(map(int, boxes[i][0]))
         pt2 = tuple(map(int, boxes[i][1]))
 
@@ -177,26 +184,10 @@ def analyzeCell(cell, backgroundIntensity):
     return cell_state, averageIntensity, area
 
 
-
-
-# # make a new folder called out
-# if not os.path.exists("out"):
-#     os.mkdir("out")
-# #delete all files in out
-# check = input("delete all files in out? (y/n)")
-# if not check == "y":
-#     exit()
-# for file in os.listdir("out"):
-#
-#     os.remove("out\\" + file)
+folder = args.input
 
 
 
-
-# folder = r"C:\Users\minec\Desktop\figure images"
-# folder = r"C:\Users\minec\Desktop\mappingsCSV"
-# folder = r"validationData"
-folder = r"C:\Users\minec\Downloads\20230405_Longevity_Exports\20230405_Longevity_Exports"
 files = os.listdir(folder)
 
 timeStart = time.time()
@@ -222,7 +213,8 @@ timeEnd = time.time()
 print("time taken: ", timeEnd - timeStart)
 print("time taken per image: ", (timeEnd - timeStart) / len(files))
 
-path = os.path.join(folder, "out")
+# path = os.path.join(folder, "out")
+path = args.output
 if not os.path.exists(path):
     os.mkdir(path)
 for i in range(len(images)):

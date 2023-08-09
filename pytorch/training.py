@@ -15,7 +15,11 @@ import os
 import PIL
 import numpy as np
 import random
-
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument("training", help="training folder")
+parser.add_argument("validation", help="validation folder")
+args = parser.parse_args()
 # import scripts.pytorchVisionScripts.utils as utils
 # from scripts.pytorchVisionScripts.engine import *
 from torch.utils.tensorboard import SummaryWriter
@@ -195,8 +199,8 @@ def main():
         
     #we have a train test split so we dont need to do this
 
-    dataset = OrganoidDataset("trainingData","SAMY Annotations 3-33-23_json (1).json",False)
-    validationDataset = OrganoidDataset("validationData","validation.json",False)
+    dataset = OrganoidDataset(args.training,"via_region_data.json",False)
+    validationDataset = OrganoidDataset(args.validation,"",False)
     dataLoader = torch.utils.data.DataLoader(dataset, batch_size=2, shuffle=True, num_workers=0, collate_fn=utils.collate_fn)
     validationDataLoader = torch.utils.data.DataLoader(validationDataset, batch_size=1, shuffle=False, num_workers=0, collate_fn=utils.collate_fn)
 
@@ -226,9 +230,9 @@ def main():
         # update the learning rate
         # lr_scheduler.step()
         # evaluate on the test dataset
-        evaluate(model,validationDataLoader, device=device)
+        evaluate(model,validationDataLoader,writer,epoch, device=device)
 
-    torch.save(model, 'mask-rcnn-pedestrian.pt')
+    torch.save(model, 'torchDebug01.1.pt')
 
 
 # if __name__ == "__main__":
