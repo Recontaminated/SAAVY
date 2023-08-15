@@ -8,6 +8,7 @@ import typing
 from tqdm import tqdm
 import pandas as pd
 import argparse
+
 parser = argparse.ArgumentParser()
 parser.add_argument("input", help="folder of images to analyze")
 parser.add_argument("output", help="folder to save output images")
@@ -17,7 +18,7 @@ if args.input is None or args.output is None:
     exit()
 
 
-device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 # device = torch.device('cpu')
 
 print("Loading model...")
@@ -29,7 +30,7 @@ model.to(device)
 
 
 model.eval()
-CLASS_NAMES = ['__background__', 'cell']
+CLASS_NAMES = ["__background__", "cell"]
 from PIL import Image
 import matplotlib.pyplot as plt
 import torchvision.transforms as T
@@ -40,55 +41,45 @@ import cv2
 import random
 import warnings
 
-warnings.filterwarnings('ignore')
-
-
-def get_colored_mask(mask):
-
-    colours = [[0, 255, 0], [0, 0, 255], [255, 0, 0], [0, 255, 255], [255, 255, 0], [255, 0, 255], [80, 70, 180],
-               [250, 80, 190], [245, 145, 50], [70, 150, 250], [50, 190, 190]]
-    r = np.zeros_like(mask).astype(np.uint8)
-    g = np.zeros_like(mask).astype(np.uint8)
-    b = np.zeros_like(mask).astype(np.uint8)
-    r[mask == 1], g[mask == 1], b[mask == 1] = colours[random.randrange(0, 10)]
-    coloured_mask = np.stack([r, g, b], axis=2)
-
-    return coloured_mask
+warnings.filterwarnings("ignore")
 
 
 def get_prediction(img_path, confidence):
-
-    img = Image.open(img_path).convert('RGB')  # get rid of alpha channel
+    img = Image.open(img_path).convert("RGB")  # get rid of alpha channel
     transform = T.Compose([T.ToTensor()])
     img = transform(img)
     img = img.to(device)
     pred = model([img])
-    pred_score = list(pred[0]['scores'].detach().cpu().numpy())
+    pred_score = list(pred[0]["scores"].detach().cpu().numpy())
     filtered_pred_indices = [pred_score.index(x) for x in pred_score if x > confidence]
 
     if not filtered_pred_indices:
         return [], [], [], None
 
     pred_t = filtered_pred_indices[
-        -1]  # it is the index of the last prediction that has a score higher than the confidence threshold
+        -1
+    ]  # it is the index of the last prediction that has a score higher than the confidence threshold
 
-    masks = (pred[0]['masks'] > 0.5).squeeze().detach().cpu().numpy()
+    masks = (pred[0]["masks"] > 0.5).squeeze().detach().cpu().numpy()
     # print(pred[0]['labels'].numpy().max())
-    pred_class = [CLASS_NAMES[i] for i in list(pred[0]['labels'].cpu().numpy())]
-    pred_boxes = [[(i[0], i[1]), (i[2], i[3])] for i in list(pred[0]['boxes'].detach().cpu().numpy())]
-    masks = masks[:pred_t + 1]
-    pred_boxes = pred_boxes[:pred_t + 1]
-    pred_class = pred_class[:pred_t + 1]
-    confidence_scores = pred_score[:pred_t + 1]
+    pred_class = [CLASS_NAMES[i] for i in list(pred[0]["labels"].cpu().numpy())]
+    pred_boxes = [
+        [(i[0], i[1]), (i[2], i[3])]
+        for i in list(pred[0]["boxes"].detach().cpu().numpy())
+    ]
+    masks = masks[: pred_t + 1]
+    pred_boxes = pred_boxes[: pred_t + 1]
+    pred_class = pred_class[: pred_t + 1]
+    confidence_scores = pred_score[: pred_t + 1]
     return masks, pred_boxes, pred_class, confidence_scores
 
 
-
-
-def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=2, text_th=2) -> tuple[
-    Any, Any]:
-
-    masks, boxes, pred_cls, confidence_scores = get_prediction(img_path, confidence_thresh)
+def segment_instance(
+    img_path: str, confidence_thresh=0.5, rect_th=2, text_size=2, text_th=2
+) -> tuple[Any, Any]:
+    masks, boxes, pred_cls, confidence_scores = get_prediction(
+        img_path, confidence_thresh
+    )
 
     img = cv2.imread(img_path)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -96,42 +87,71 @@ def segment_instance(img_path: str, confidence_thresh=0.5, rect_th=2, text_size=
     cells = []
     backgroundIntesity = calcBackgroundIntensity(img, masks)
 
-
     for i in range(len(masks)):
-        rgb_mask = get_colored_mask(masks[i])
-        img = cv2.addWeighted(img, 1, rgb_mask, 0.5, 0)
         pt1 = tuple(map(int, boxes[i][0]))
         pt2 = tuple(map(int, boxes[i][1]))
 
         x, y = pt2
-        #draw a polygon of the mask
-   
-        contours, _ = cv2.findContours(masks[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        contours, _ = cv2.findContours(
+            masks[i].astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
         if len(contours) == 0:
-            continue 
-        (x, y), (minorAxisLength, majorAxisLength), angle = cv2.fitEllipse(max(contours, key=cv2.contourArea))
-        
-        
+            continue
+        (x, y), (minorAxisLength, majorAxisLength), angle = cv2.fitEllipse(
+            max(contours, key=cv2.contourArea)
+        )
+
         semi_major_axis = majorAxisLength / 2
         semi_minor_axis = minorAxisLength / 2
-        circularity = round(np.sqrt(pow(semi_major_axis, 2) - pow(semi_minor_axis, 2)) / semi_major_axis, 2)
+        circularity = round(
+            np.sqrt(pow(semi_major_axis, 2) - pow(semi_minor_axis, 2))
+            / semi_major_axis,
+            2,
+        )
         # Draw the contours on the image
         cv2.drawContours(img, contours, -1, (0, 255, 0), rect_th)
 
-        #get the average intensity of all pixels within mask
+        # get the average intensity of all pixels within mask
         imgSave = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         imgSave = imgSave * masks[i]
-
 
         viability, averageIntensity, area = analyzeCell(imgSave, backgroundIntesity)
         if area == 0:
             continue
-        cv2.putText(img, str(round(viability, 2)), (int(x+ 10), int(y + 0)),
-                   cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
-        cv2.putText(img, str(confidence_scores[i]), (int(x + 10), int(y + 15)), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
-        masked_image_out = cv2.putText(img, str(round(averageIntensity, 2)), (int(x + 20), int(y + 30)),
-                                       cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1)
-        cell_meta = {"viability": viability, "circularity": circularity, "averageIntensity": averageIntensity, "area": area}
+        cv2.putText(
+            img,
+            str(round(viability, 2)),
+            (int(x + 10), int(y + 0)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 0, 0),
+            1,
+        )
+        cv2.putText(
+            img,
+            str(confidence_scores[i]),
+            (int(x + 10), int(y + 15)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 0, 0),
+            1,
+        )
+        masked_image_out = cv2.putText(
+            img,
+            str(round(averageIntensity, 2)),
+            (int(x + 20), int(y + 30)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (0, 0, 0),
+            1,
+        )
+        cell_meta = {
+            "viability": viability,
+            "circularity": circularity,
+            "averageIntensity": averageIntensity,
+            "area": area,
+        }
         cells.append(cell_meta)
     print("background intensity: ", backgroundIntesity)
     return img, cells, backgroundIntesity
@@ -151,33 +171,32 @@ def calcBackgroundIntensity(img, masks) -> float:
 
     backgroundMask = np.logical_not(combined_mask)
 
-
-    
-
-    imgSave = imgSave * backgroundMask 
+    imgSave = imgSave * backgroundMask
     # plt.imshow(imgSave)
     # plt.show()
-    #flatten 2d array to 1d
+    # flatten 2d array to 1d
     # plt.imshow(imgSave, cmap="gray")
     # plt.show()
     imgSave = imgSave.flatten()
 
-    masked = imgSave[imgSave > 5] # ignore the completely black background
-  
-    masked = masked[masked != 255]#ignore the status bar white
+    masked = imgSave[imgSave > 5]  # ignore the completely black background
+
+    masked = masked[masked != 255]  # ignore the status bar white
     # ignore everything greater than 250
-    
+
     avg = np.average(masked)
     print(avg)
 
     return avg
 
-def analyzeCell(cell, backgroundIntensity):
 
+def analyzeCell(cell, backgroundIntensity):
     area = np.count_nonzero(cell)
-    cell = cell[cell != 0] # ignore the completely black background
+    cell = cell[cell != 0]  # ignore the completely black background
     averageIntensity = np.average(cell)
-    cell_state = ((60 - np.clip((backgroundIntensity - 15 - averageIntensity), 0, 60)) / 60) * 100
+    cell_state = (
+        (60 - np.clip((backgroundIntensity - 15 - averageIntensity), 0, 60)) / 60
+    ) * 100
 
     # circularity = 0
 
@@ -187,25 +206,33 @@ def analyzeCell(cell, backgroundIntensity):
 folder = args.input
 
 
-
 files = os.listdir(folder)
 
 timeStart = time.time()
 # for file in files:
 images = []
-#make a new pandas DF
+# make a new pandas DF
 images_meta = []
 
 for file in tqdm(files):
-    if not (file.endswith('.jpg') or file.endswith('.png')):
+    if not (file.endswith(".jpg") or file.endswith(".png")):
         continue
     print(file)
-    image, cells, backgroundIntensity = segment_instance(folder + "\\" + file, confidence_thresh=0.8)
+    image, cells, backgroundIntensity = segment_instance(
+        folder + "\\" + file, confidence_thresh=0.8
+    )
     image_total_px = image.shape[0] * image.shape[1]
     sum_area = sum([cell["area"] for cell in cells])
     pct_area = sum_area / image_total_px
 
-    images_meta.append({"file": file, "cells": cells, "backgroundIntensity": backgroundIntensity, "pct_area_analyzed": pct_area})
+    images_meta.append(
+        {
+            "file": file,
+            "cells": cells,
+            "backgroundIntensity": backgroundIntensity,
+            "pct_area_analyzed": pct_area,
+        }
+    )
     images.append(image)
 
 
@@ -219,36 +246,57 @@ if not os.path.exists(path):
     os.mkdir(path)
 for i in range(len(images)):
     try:
-        cv2.imwrite(os.path.join(path,files[i]), images[i])
+        cv2.imwrite(os.path.join(path, files[i]), images[i])
     except:
         print("error saving image: ", files[i])
 
-#make a new dataframe with empty everything
-df = pd.DataFrame(columns=["file", "count", "avg_viability", "avg_circularity", "avg_intensity", "radius (area / pi)"])
+# make a new dataframe with empty everything
+df = pd.DataFrame(
+    columns=[
+        "file",
+        "count",
+        "avg_viability",
+        "avg_circularity",
+        "avg_intensity",
+        "radius (area / pi)",
+    ]
+)
 for image in images_meta:
     if image["cells"] == []:
         avg_viability = -1
         avg_circularity = -1
         avg_intensity = -1
         avg_area = -1
-       
+
     else:
         num_cells = len(image["cells"])
-        avg_viability = np.average([cell["viability"] for cell in image["cells"]]).round(2)
-        avg_circularity = np.average([cell["circularity"] for cell in image["cells"]]).round(5) 
-        avg_intensity = np.average([cell["averageIntensity"] for cell in image["cells"]]).round(2) 
-        avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2) 
+        avg_viability = np.average(
+            [cell["viability"] for cell in image["cells"]]
+        ).round(2)
+        avg_circularity = np.average(
+            [cell["circularity"] for cell in image["cells"]]
+        ).round(5)
+        avg_intensity = np.average(
+            [cell["averageIntensity"] for cell in image["cells"]]
+        ).round(2)
+        avg_area = np.average([cell["area"] for cell in image["cells"]]).round(2)
 
-        
-
-
-    df = df.append({"file": image["file"],"count": num_cells, "pct_analyzed":image["pct_area_analyzed"]*100,"background_intenstiy" : image["backgroundIntensity"], "avg_viability": avg_viability, "avg_circularity": avg_circularity, "avg_intensity": avg_intensity, "avg_area": avg_area}, ignore_index=True)
+    df = df.append(
+        {
+            "file": image["file"],
+            "count": num_cells,
+            "pct_analyzed": image["pct_area_analyzed"] * 100,
+            "background_intenstiy": image["backgroundIntensity"],
+            "avg_viability": avg_viability,
+            "avg_circularity": avg_circularity,
+            "avg_intensity": avg_intensity,
+            "avg_area": avg_area,
+        },
+        ignore_index=True,
+    )
 try:
-    df.to_csv(os.path.join(path,"summary.csv"), index=False)
+    df.to_csv(os.path.join(path, "summary.csv"), index=False)
 except PermissionError:
     print("Please close the summary.csv file. press any key to continue")
     input()
     # df.to_csv("out\\summary.csv", index=False)
-
-
-

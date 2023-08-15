@@ -1,9 +1,11 @@
 import torch
-from scripts import gone as T
+from torchScripts import gone as T
 
 
 class DetectionPresetTrain:
-    def __init__(self, *, data_augmentation, hflip_prob=0.5, mean=(123.0, 117.0, 104.0)):
+    def __init__(
+        self, *, data_augmentation, hflip_prob=0.5, mean=(123.0, 117.0, 104.0)
+    ):
         if data_augmentation == "hflip":
             self.transforms = T.Compose(
                 [
@@ -26,7 +28,20 @@ class DetectionPresetTrain:
             self.transforms = T.Compose(
                 [
                     T.RandomShortestSize(
-                        min_size=(480, 512, 544, 576, 608, 640, 672, 704, 736, 768, 800), max_size=1333
+                        min_size=(
+                            480,
+                            512,
+                            544,
+                            576,
+                            608,
+                            640,
+                            672,
+                            704,
+                            736,
+                            768,
+                            800,
+                        ),
+                        max_size=1333,
                     ),
                     T.RandomHorizontalFlip(p=hflip_prob),
                     T.PILToTensor(),

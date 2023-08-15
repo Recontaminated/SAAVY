@@ -5,11 +5,13 @@ import time
 import torch
 import torchvision.models.detection.mask_rcnn
 from . import utils
-from scripts.coco_eval import CocoEvaluator
-from scripts.coco_utils import get_coco_api_from_dataset
+from torchScripts.coco_eval import CocoEvaluator
+from torchScripts.coco_utils import get_coco_api_from_dataset
 
 
-def train_one_epoch(model, optimizer, data_loader, device, epoch,writer, print_freq,scaler=None):
+def train_one_epoch(
+    model, optimizer, data_loader, device, epoch, writer, print_freq, scaler=None
+):
     model.train()
     metric_logger = utils.MetricLogger(delimiter="  ")
     metric_logger.add_meter("lr", utils.SmoothedValue(window_size=1, fmt="{value:.6f}"))
@@ -41,7 +43,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,writer, print_f
             print(f"Loss is {loss_value}, stopping training")
             print(loss_dict_reduced)
             sys.exit(1)
-    
+
         total_loss += loss_value
         optimizer.zero_grad()
         if scaler is not None:
@@ -57,7 +59,7 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,writer, print_f
 
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         metric_logger.update(lr=optimizer.param_groups[0]["lr"])
-    writer.add_scalar("Loss/train", total_loss/len(data_loader), epoch)
+    writer.add_scalar("Loss/train", total_loss / len(data_loader), epoch)
     return metric_logger
 
 
@@ -116,14 +118,13 @@ def _get_iou_types(model):
 #     return coco_evaluator
 
 
-
 # Removed @torch.inference_mode() decorator
 def evaluate(model, data_loader, writer, epoch, device):
     model.train()
 
     total_loss = 0
     lr_scheduler = None
-    
+
     header = f"validation Epoch: [{epoch}]"
     metric_logger = utils.MetricLogger(delimiter="  ")
 
@@ -140,11 +141,7 @@ def evaluate(model, data_loader, writer, epoch, device):
 
         loss_value = losses_reduced.item()
 
-
-    
         total_loss += loss_value
 
-
-    
-    writer.add_scalar("Loss/Val", total_loss/len(data_loader), epoch)
+    writer.add_scalar("Loss/Val", total_loss / len(data_loader), epoch)
     return metric_logger
